@@ -18,9 +18,9 @@ GRID_Z = 10
 SPACING = 11 
 
 # 1. [Transformation Rules]: 
-#    Turns into Oak Planks when loaded; returns to Oak Planks after being mined/burned to air.
+#    Transform to {TRANSFORM_TARGET} after being burnt to air.
 #    (If the block is paired, the pairing logic takes over; this list does not apply to paired blocks).
-TRANSFORM_TO_PLANKS = [
+TRANSFORM_AFTER_BURN = [
     "minecraft:white_carpet"
 ]
 
@@ -36,25 +36,33 @@ RESTORE_SELF = [
 ]
 
 # 3. [Fire Trigger - Up]: 
-#    If the current position is fire, place Oak Planks [Above] it (if above is not fire).
+#    If the current position is fire, place {TRANSFORM_TARGET} [Above] it (if above is not fire).
 FIRE_TRIGGER_UP = [
     "minecraft:dark_oak_planks"
 ]
 
 # 4. [Fire Trigger - Down]: 
-#    If the current position is fire, place Oak Planks [Below] it (if below is not fire).
+#    If the current position is fire, place {TRANSFORM_TARGET} [Below] it (if below is not fire).
 FIRE_TRIGGER_DOWN = [
     "minecraft:jungle_planks"
 ]
 
+# 5. [Immediate Restore]: 
+#    If it becomes fire, it restores itself to the original block.
 IMMEDIATE_RESTORE = [
     "minecraft:acacia_planks",
     "minecraft:jungle_leaves"
 ]
+
+# 6. [Flood Protection]: 
+#    If the above block is lava, remove it.
 REMOVE_ABOVE_LAVA = [
     "minecraft:acacia_planks",
     "minecraft:jungle_leaves"
 ]
+
+# Default block to transform to
+TRANSFORM_TARGET = "minecraft:oak_leaves"
 
 # 16 Colors List
 COLORS = [
@@ -135,8 +143,8 @@ def get_block_regen_commands(nbt_path):
         x, y, z = coord
 
         # Rule: Air -> Transform
-        if name in TRANSFORM_TO_PLANKS:
-            commands.append(f"execute if block ~{x} ~{y-1} ~{z} minecraft:air run setblock ~{x} ~{y-1} ~{z} minecraft:oak_planks")
+        if name in TRANSFORM_AFTER_BURN:
+            commands.append(f"execute if block ~{x} ~{y-1} ~{z} minecraft:air run setblock ~{x} ~{y-1} ~{z} {TRANSFORM_TARGET}")
             
         # Rule: Self-Restore
         elif name in RESTORE_SELF:
@@ -147,11 +155,11 @@ def get_block_regen_commands(nbt_path):
         
         # Trigger: Fire -> Generate Above
         if name in FIRE_TRIGGER_UP:
-            commands.append(f"execute if block ~{x} ~{y-1} ~{z} minecraft:fire unless block ~{x} ~{y} ~{z} minecraft:fire run setblock ~{x} ~{y} ~{z} minecraft:oak_planks")
+            commands.append(f"execute if block ~{x} ~{y-1} ~{z} minecraft:fire unless block ~{x} ~{y} ~{z} minecraft:fire run setblock ~{x} ~{y} ~{z} {TRANSFORM_TARGET}")
 
         # Trigger: Fire -> Generate Below
         if name in FIRE_TRIGGER_DOWN:
-            commands.append(f"execute if block ~{x} ~{y-1} ~{z} minecraft:fire unless block ~{x} ~{y-2} ~{z} minecraft:fire run setblock ~{x} ~{y-2} ~{z} minecraft:oak_planks")
+            commands.append(f"execute if block ~{x} ~{y-1} ~{z} minecraft:fire unless block ~{x} ~{y-2} ~{z} minecraft:fire run setblock ~{x} ~{y-2} ~{z} {TRANSFORM_TARGET}")
         
         # Trigger: Lava Above -> Remove
         if name in REMOVE_ABOVE_LAVA:
@@ -166,12 +174,12 @@ def get_block_regen_commands(nbt_path):
         xc, yc, zc = pc
         yw -= 1; yc -= 1
         
-        commands.append(f"execute if block ~{xw} ~{yw} ~{zw} minecraft:{color}_wool run setblock ~{xw} ~{yw} ~{zw} minecraft:oak_planks")
+        commands.append(f"execute if block ~{xw} ~{yw} ~{zw} minecraft:{color}_wool run setblock ~{xw} ~{yw} ~{zw} {TRANSFORM_TARGET}")
         commands.append(f"execute if block ~{xc} ~{yc} ~{zc} minecraft:{color}_concrete run setblock ~{xc} ~{yc} ~{zc} minecraft:air")
-        commands.append(f"execute if block ~{xw} ~{yw} ~{zw} minecraft:air if block ~{xc} ~{yc} ~{zc} minecraft:air run setblock ~{xw} ~{yw} ~{zw} minecraft:oak_planks")
-        commands.append(f"execute if block ~{xw} ~{yw} ~{zw} minecraft:air if block ~{xc} ~{yc} ~{zc} minecraft:fire run setblock ~{xw} ~{yw} ~{zw} minecraft:oak_planks")
-        commands.append(f"execute if block ~{xw} ~{yw} ~{zw} minecraft:fire if block ~{xc} ~{yc} ~{zc} minecraft:air run setblock ~{xc} ~{yc} ~{zc} minecraft:oak_planks")
-        commands.append(f"execute if block ~{xw} ~{yw} ~{zw} minecraft:fire if block ~{xc} ~{yc} ~{zc} minecraft:fire run setblock ~{xw} ~{yw} ~{zw} minecraft:oak_planks")
+        commands.append(f"execute if block ~{xw} ~{yw} ~{zw} minecraft:air if block ~{xc} ~{yc} ~{zc} minecraft:air run setblock ~{xw} ~{yw} ~{zw} {TRANSFORM_TARGET}")
+        commands.append(f"execute if block ~{xw} ~{yw} ~{zw} minecraft:air if block ~{xc} ~{yc} ~{zc} minecraft:fire run setblock ~{xw} ~{yw} ~{zw} {TRANSFORM_TARGET}")
+        commands.append(f"execute if block ~{xw} ~{yw} ~{zw} minecraft:fire if block ~{xc} ~{yc} ~{zc} minecraft:air run setblock ~{xc} ~{yc} ~{zc} {TRANSFORM_TARGET}")
+        commands.append(f"execute if block ~{xw} ~{yw} ~{zw} minecraft:fire if block ~{xc} ~{yc} ~{zc} minecraft:fire run setblock ~{xw} ~{yw} ~{zw} {TRANSFORM_TARGET}")
 
     # Terracotta & Glazed Terracotta (Mutually Exclusive Logic)
     for color, pt, pg in valid_terra_pairs:
@@ -179,13 +187,10 @@ def get_block_regen_commands(nbt_path):
         xg, yg, zg = pg
         yt -= 1; yg -= 1
         
-        terra = f"minecraft:{color}_terracotta"
-        glazed = f"minecraft:{color}_glazed_terracotta"
-        
-        commands.append(f"execute if block ~{xt} ~{yt} ~{zt} {terra} run setblock ~{xt} ~{yt} ~{zt} minecraft:air")
-        commands.append(f"execute if block ~{xg} ~{yg} ~{zg} {glazed} run setblock ~{xg} ~{yg} ~{zg} minecraft:air")
-        commands.append(f"execute if block ~{xt} ~{yt} ~{zt} minecraft:fire unless block ~{xg} ~{yg} ~{zg} minecraft:fire run setblock ~{xg} ~{yg} ~{zg} minecraft:oak_planks")
-        commands.append(f"execute if block ~{xg} ~{yg} ~{zg} minecraft:fire unless block ~{xt} ~{yt} ~{zt} minecraft:fire run setblock ~{xt} ~{yt} ~{zt} minecraft:oak_planks")
+        commands.append(f"execute if block ~{xt} ~{yt} ~{zt} minecraft:{color}_terracotta run setblock ~{xt} ~{yt} ~{zt} minecraft:air")
+        commands.append(f"execute if block ~{xg} ~{yg} ~{zg} minecraft:{color}_glazed_terracotta run setblock ~{xg} ~{yg} ~{zg} minecraft:air")
+        commands.append(f"execute if block ~{xt} ~{yt} ~{zt} minecraft:fire unless block ~{xg} ~{yg} ~{zg} minecraft:fire run setblock ~{xg} ~{yg} ~{zg} {TRANSFORM_TARGET}")
+        commands.append(f"execute if block ~{xg} ~{yg} ~{zg} minecraft:fire unless block ~{xt} ~{yt} ~{zt} minecraft:fire run setblock ~{xt} ~{yt} ~{zt} {TRANSFORM_TARGET}")
 
     return commands
 
