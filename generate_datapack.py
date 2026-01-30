@@ -150,8 +150,9 @@ def get_block_regen_commands(nbt_path):
         elif name in RESTORE_SELF:
             # Rule: Fire -> Immediate Restore
             if name in IMMEDIATE_RESTORE:
-                commands.append(f"execute if block ~{x} ~{y-1} ~{z} minecraft:fire run setblock ~{x} ~{y-1} ~{z} {name}")
-            commands.append(f"execute if block ~{x} ~{y-1} ~{z} minecraft:air run setblock ~{x} ~{y-1} ~{z} {name}")
+                commands.append(f"execute unless block ~{x} ~{y-1} ~{z} {name} run setblock ~{x} ~{y-1} ~{z} {name}")
+            else:
+                commands.append(f"execute if block ~{x} ~{y-1} ~{z} minecraft:air run setblock ~{x} ~{y-1} ~{z} {name}")
         
         # Trigger: Fire -> Generate Above
         if name in FIRE_TRIGGER_UP:
@@ -300,3 +301,4 @@ scoreboard players set @s f_cooldown 82
 
 if __name__ == "__main__":
     main()
+
